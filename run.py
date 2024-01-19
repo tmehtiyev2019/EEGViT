@@ -25,7 +25,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=6, gamma=0.1)
 
 
-def train(model, optimizer, scheduler = None):
+def train(model, criterion, optimizer, scheduler = None):
     '''
         model: model to train
         optimizer: optimizer to update weights
@@ -131,4 +131,4 @@ def train(model, optimizer, scheduler = None):
             scheduler.step()
 
 if __name__ == "__main__":
-    train(model,optimizer=optimizer, scheduler=scheduler)
+    train(model, criterion=criterion, optimizer=optimizer, scheduler=scheduler)
