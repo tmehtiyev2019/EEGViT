@@ -2,7 +2,7 @@ from transformers import Wav2Vec2Model
 import torch
 from torch import nn
 
-class EEGViT_pretrained(nn.Module):
+class EEGAudioNet_pretrained(nn.Module):
     def __init__(self):
         super().__init__()
         # Define the convolutional layers
