@@ -38,18 +38,29 @@ class EEGAudioNet_pretrained(nn.Module):
         
     def forward(self, x):
         # Apply the convolutional and batchnorm layers
-        x = self.conv1(x)
+        x = self.conv1(x)  # [Batch, Channels, Height, Width]
         x = self.batchnorm1(x)
         x = self.depthwise(x)
         x = self.batchnorm2(x)
+    
+        # Reshape the output to match Wav2Vec2 input expectations
+        # Flatten the channel and height dimensions and maintain the sequence in the width dimension
+        batch_size, channels, height, width = x.shape
+        x = x.view(batch_size, channels*height, width)  # [Batch, New Channels, Sequence Length]
         
-        # Flatten the output to fit Wav2Vec 2.0 input requirements
-        x = x.view(x.size(0), -1)
-        
+        # Permute to [Batch, Sequence Length, New Channels] as Wav2Vec2 expects a "channel" last format
+        x = x.permute(0, 2, 1)
+    
         # Get the embeddings from the Wav2Vec 2.0 model
-        x = self.wav2vec2(x).last_hidden_state
-        
+        # We need to match the input dimensions that Wav2Vec2 expects
+        outputs = self.wav2vec2(x).last_hidden_state
+    
+        # Apply any additional pooling or reshaping here if necessary
+        # For example, you might want to average across the time dimension
+        x = torch.mean(outputs, dim=1)
+    
         # Pass the embeddings through the classifier
         x = self.classifier(x)
-        
+    
         return x
+
