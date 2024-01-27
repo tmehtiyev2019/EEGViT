@@ -51,7 +51,7 @@ class EEGViT_pretrained(nn.Module):
         config.update({'patch_size': (8,1)})
 
         # Initialize the Vision Transformer
-        self.model = ViTModel.from_pretrained(model_name, config=config)
+        self.model = ViTModel.from_pretrained(model_name, config=config, ignore_mismatched_sizes=True)
         
         # Classifier for regression - unchanged
         self.classifier = nn.Sequential(
