@@ -6,6 +6,7 @@ from torch.nn import functional as F
 class EEGViT_pretrained(nn.Module):
     def __init__(self):
         super().__init__()
+        # Convolutional layer 1 remains unchanged
         self.conv1 = nn.Conv2d(
             in_channels=1, 
             out_channels=256,
@@ -14,45 +15,65 @@ class EEGViT_pretrained(nn.Module):
             padding=(0,2),
             bias=False
         )
-        
-        # The rest of the convolutional layers are removed to match the expected input of the ViT model
-        
         self.batchnorm1 = nn.BatchNorm2d(256)
-        self.dropout = nn.Dropout(p=0.1)
+        self.relu1 = nn.ReLU(inplace=True)
 
-        # Initialize the ViT model with the original configuration
+        # Additional convolutional layers
+        # Convolutional layer 2 - reduced number of channels to prevent too many parameters
+        self.conv2 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,  # Keeping the same number of channels
+            kernel_size=(1, 7),  # Smaller kernel to capture detailed features
+            stride=(1, 1),
+            padding=(0,1),
+            bias=False
+        )
+        self.batchnorm2 = nn.BatchNorm2d(256)
+        self.relu2 = nn.ReLU(inplace=True)
+
+        # Skip connection for conv2
+        self.skip_conv2 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(1, 1),
+            stride=(1, 1),
+            bias=False
+        )
+        self.skip_bn2 = nn.BatchNorm2d(256)
+        
+        self.dropout = nn.Dropout(p=0.1)  # Regularization
+        
+        # Define model_name and config as before
         model_name = "google/vit-base-patch16-224"
-        self.model = ViTModel.from_pretrained(model_name)
+        config = ViTConfig.from_pretrained(model_name)
+        config.update({'num_channels': 256})  # Matching conv2's output channels
+        config.update({'image_size': (129,14)})
+        config.update({'patch_size': (8,1)})
 
-        # The classifier is updated to output a continuous value for the eye position
+        # Initialize the Vision Transformer
+        self.model = ViTModel.from_pretrained(model_name, config=config)
+        
+        # Classifier for regression - unchanged
         self.classifier = nn.Sequential(
-            nn.Linear(self.model.config.hidden_size, 512),
+            nn.Linear(config.hidden_size, 512),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Linear(512, 1)  # For regression task
+            nn.Linear(512, 1)
         )
         
     def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(self.batchnorm1(x))
-        x = self.dropout(x)
+        # Pass through the first conv layer
+        x1 = self.relu1(self.batchnorm1(self.conv1(x)))
         
-        # Flatten the output for the ViT model
-        x = x.flatten(2)
-        x = x.transpose(1, 2)  # Transpose for correct shape
+        # Pass through the second conv layer with skip connection
+        x2 = self.relu2(self.batchnorm2(self.conv2(x1))) + self.skip_bn2(self.skip_conv2(x1))
+        x2 = self.dropout(x2)
         
-        # Adjust the size of the sequence for the ViT model
-        n, sequence_length, _ = x.size()
-        if sequence_length > self.model.config.num_hidden_layers:
-            x = x[:, :self.model.config.num_hidden_layers, :]
-        elif sequence_length < self.model.config.num_hidden_layers:
-            padding = x.new_zeros((n, self.model.config.num_hidden_layers - sequence_length, self.model.config.hidden_size))
-            x = torch.cat([x, padding], dim=1)
+        # Flatten and pass through ViT
+        x2 = x2.flatten(2).transpose(1, 2)  # Ensure proper dimensionality for ViT
+        x2 = self.model(pixel_values=x2).last_hidden_state
         
-        outputs = self.model(inputs_embeds=x)
-        x = outputs.last_hidden_state[:, 0]  # Take the [CLS] token
+        # Apply classifier to the [CLS] token
+        x_out = self.classifier(x2[:, 0])
         
-        # Pass through the classifier
-        x = self.classifier(x)
-        return x
-
+        return x_out
