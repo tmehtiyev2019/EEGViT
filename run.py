@@ -14,7 +14,7 @@ import numpy as np
 '''
 models: EEGAudioNet_pretrained; EEGViT_pretrained; EEGViT_raw; ViTBase; ViTBase_pretrained
 '''
-model = EEGAudioNet_pretrained()
+model = EEGViT_pretrained.py
 EEGEyeNet = EEGEyeNetDataset('/content/drive/MyDrive/EEGViT_DATA/Position_task_with_dots_synchronised_min.npz')
 batch_size = 64
 n_epoch = 15
