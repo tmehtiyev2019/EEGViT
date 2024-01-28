@@ -12,7 +12,7 @@ from tqdm import tqdm
 import numpy as np
 
 '''
-models: EEGAudioNet_pretrained; EEGViT_pretrained; EEGViT_raw; ViTBase; ViTBase_pretrained
+models: EEGViT_pretrained; EEGViT_raw; ViTBase; ViTBase_pretrained
 '''
 model = EEGViT_pretrained()
 EEGEyeNet = EEGEyeNetDataset('/content/drive/MyDrive/EEGViT_DATA/Position_task_with_dots_synchronised_min.npz')
