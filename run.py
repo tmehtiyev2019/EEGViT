@@ -2,7 +2,6 @@ from models.EEGViT_pretrained import EEGViT_pretrained
 from models.EEGViT import EEGViT_raw
 from models.ViTBase import ViTBase
 from models.ViTBase_pretrained import ViTBase_pretrained
-from models.EEGAudioNet_pretrained import EEGAudioNet_pretrained
 from helper_functions import split
 from dataset.EEGEyeNet import EEGEyeNetDataset
 import torch
